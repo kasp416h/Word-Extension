@@ -13,8 +13,16 @@ const fetchAllDocuments = async (): Promise<DocumentInfo[]> => {
     const documentsFromDownloads = await fetchDocumentsInFolder("./Users/kasperhog/Downloads");
     const documentsFromDocuments = await fetchDocumentsInFolder("./Users/kasperhog/Documents");
     const documentsFromOneDrive = await fetchDocumentsInFolder("./Users/kasperhog/OneDrive - Syddansk Erhvervsskole");
+    const documentsFromICloud = await fetchDocumentsInFolder(
+      "./Users/kasperhog/Library/Mobile Documents/com~apple~CloudDocs",
+    );
 
-    const allDocuments = [...documentsFromDownloads, ...documentsFromDocuments, ...documentsFromOneDrive];
+    const allDocuments = [
+      ...documentsFromDownloads,
+      ...documentsFromDocuments,
+      ...documentsFromOneDrive,
+      ...documentsFromICloud,
+    ];
 
     const sortedDocuments = allDocuments.sort((a, b) => b.timestamp - a.timestamp);
 
@@ -49,7 +57,7 @@ const fetchDocumentsInFolder = async (folderPath: string): Promise<DocumentInfo[
 export default function Main() {
   const [documentPaths, setDocumentPaths] = useState<DocumentInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const limit = 8;
+  const limit = 16;
 
   useEffect(() => {
     fetchAllDocuments().then((allDocuments) => setDocumentPaths(allDocuments.slice(0, limit)));

@@ -1,5 +1,5 @@
 import { exec } from "child_process";
-import { showHUD, ActionPanel, List, Icon, Action } from "@raycast/api";
+import { showHUD, ActionPanel, List, Icon, Action, closeMainWindow } from "@raycast/api";
 import { useState, useEffect } from "react";
 import { promises, statSync } from "fs";
 
@@ -35,7 +35,7 @@ const fetchAllDocuments = async (): Promise<DocumentInfo[]> => {
 
 const fetchDocumentsInFolder = async (folderPath: string): Promise<DocumentInfo[]> => {
   const documentPaths = await promises.readdir(folderPath);
-  const docxFiles = documentPaths.filter((filename) => filename.endsWith(".docx"));
+  const docxFiles = documentPaths.filter((filename) => filename.endsWith(".docx") && !filename.startsWith("~$"));
 
   const documents = await Promise.all(
     docxFiles.map(async (filename) => {
@@ -94,7 +94,8 @@ export default function Main() {
                 title="Open in Finder"
                 icon={Icon.Finder}
                 onAction={() => {
-                  exec(`open ${document.path}`);
+                  exec(`open "${document.path}"`);
+                  closeMainWindow();
                 }}
               />
             </ActionPanel>

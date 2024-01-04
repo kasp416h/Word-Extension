@@ -1,57 +1,54 @@
 import { exec } from "child_process";
 import { showHUD, ActionPanel, List, Icon, Action, closeMainWindow } from "@raycast/api";
 import { useState, useEffect } from "react";
-import { promises, statSync } from "fs";
+import { promises as fsPromises } from "fs";
+import path from "path";
 
-interface DocumentInfo {
+const documentDirectories = [
+  "/Users/kasperhog/Downloads",
+  "/Users/kasperhog/Documents",
+  "/Users/kasperhog/OneDrive - Syddansk Erhvervsskole",
+  "/Users/kasperhog/Library/Mobile Documents/com~apple~CloudDocs",
+];
+
+type DocumentInfo = {
   timestamp: number;
   path: string;
-}
-
-const fetchAllDocuments = async (): Promise<DocumentInfo[]> => {
-  try {
-    const documentsFromDownloads = await fetchDocumentsInFolder("./Users/kasperhog/Downloads");
-    const documentsFromDocuments = await fetchDocumentsInFolder("./Users/kasperhog/Documents");
-    const documentsFromOneDrive = await fetchDocumentsInFolder("./Users/kasperhog/OneDrive - Syddansk Erhvervsskole");
-    const documentsFromICloud = await fetchDocumentsInFolder(
-      "./Users/kasperhog/Library/Mobile Documents/com~apple~CloudDocs",
-    );
-
-    const allDocuments = [
-      ...documentsFromDownloads,
-      ...documentsFromDocuments,
-      ...documentsFromOneDrive,
-      ...documentsFromICloud,
-    ];
-
-    const sortedDocuments = allDocuments.sort((a, b) => b.timestamp - a.timestamp);
-
-    return sortedDocuments;
-  } catch (error: any) {
-    console.error(`Error fetching documents: ${error.message}`);
-    throw new Error("Error fetching documents");
-  }
 };
 
 const fetchDocumentsInFolder = async (folderPath: string): Promise<DocumentInfo[]> => {
-  const documentPaths = await promises.readdir(folderPath);
-  const docxFiles = documentPaths.filter((filename) => filename.endsWith(".docx") && !filename.startsWith("~$"));
+  try {
+    const documentPaths = await fsPromises.readdir(folderPath, { withFileTypes: true });
+    const docxFiles = documentPaths
+      .filter((dirent) => dirent.isFile() && dirent.name.endsWith(".docx") && !dirent.name.startsWith("~$"))
+      .map((dirent) => dirent.name);
 
-  const documents = await Promise.all(
-    docxFiles.map(async (filename) => {
-      const path = `${folderPath}/${filename}`;
-      const { mtimeMs } = await promises.stat(path);
-      return { timestamp: mtimeMs, path } as DocumentInfo;
-    }),
-  );
+    const documents = await Promise.all(
+      docxFiles.map(async (filename) => {
+        const filePath = path.join(folderPath, filename);
+        const stats = await fsPromises.stat(filePath);
+        return { timestamp: stats.mtimeMs, path: filePath };
+      }),
+    );
 
-  const subfolders = documentPaths.filter((subfolder) => statSync(`${folderPath}/${subfolder}`).isDirectory());
+    const subfolderDocuments = (
+      await Promise.all(
+        documentPaths
+          .filter((dirent) => dirent.isDirectory())
+          .map((dirent) => fetchDocumentsInFolder(path.join(folderPath, dirent.name))),
+      )
+    ).flat();
 
-  const subfolderDocuments = await Promise.all(
-    subfolders.map(async (subfolder) => fetchDocumentsInFolder(`${folderPath}/${subfolder}`)),
-  );
+    return [...documents, ...subfolderDocuments];
+  } catch (error) {
+    console.error(`Error fetching documents in ${folderPath}: ${error}`);
+    return [];
+  }
+};
 
-  return documents.concat(...subfolderDocuments);
+const fetchAllDocuments = async (): Promise<DocumentInfo[]> => {
+  const documents = (await Promise.all(documentDirectories.map(fetchDocumentsInFolder))).flat();
+  return documents.sort((a, b) => b.timestamp - a.timestamp);
 };
 
 export default function Main() {
@@ -71,7 +68,6 @@ export default function Main() {
         ...additionalDocuments.slice(prevDocuments.length, prevDocuments.length + limit),
       ]);
     } catch (error) {
-      console.error("Error loading more documents:", error);
       showHUD("Error loading more documents");
     }
   };
@@ -85,7 +81,7 @@ export default function Main() {
       {filteredDocuments.map((document) => (
         <List.Item
           key={document.path}
-          title={`${document.path.split("/").pop() || ""}`}
+          title={path.basename(document.path)}
           subtitle={`Modified: ${new Date(document.timestamp).toLocaleString()}`}
           icon="../assets/word.png"
           actions={

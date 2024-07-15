@@ -7,7 +7,6 @@ import path from "path";
 const documentDirectories = [
   "/Users/kasperhog/Downloads",
   "/Users/kasperhog/Documents",
-  "/Users/kasperhog/OneDrive - Syddansk Erhvervsskole",
   "/Users/kasperhog/Library/Mobile Documents/com~apple~CloudDocs",
 ];
 

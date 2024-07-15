@@ -13,14 +13,14 @@
   "commands": [
     {
       "name": "newDocument",
-      "title": "New Document",
-      "description": "Opens a new worsd document",
+      "title": "Create New Document",
+      "description": "Opens a new word document",
       "mode": "no-view"
     },
     {
-      "name": "getRecentDocuments",
-      "title": "Get Recent Documents",
-      "description": "Gets the last modified documents",
+      "name": "recentDocuments",
+      "title": "Show Recent Documents",
+      "description": "Shows the last modified documents",
       "mode": "view"
     }
   ],
